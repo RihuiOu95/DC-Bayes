@@ -1,0 +1,49 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(dplyr)
+library(rstan)
+library(jsonlite)
+library(reticulate)
+
+```
+
+
+```{r}
+python_dat = py_load_object('data.pkl')
+p = length(python_dat$beta)
+q = length(python_dat$alpha)
+d = dim(python_dat$X)[1]
+r = max(p, q) 
+y = python_dat$y
+X = python_dat$X
+T = length(y)
+data = list(T=T, p=p, q=q, r=max(p,q), d=d, y=y, X=X, power=1.)
+#data = dict(T=T, p=p, q=q, r=max(p,q), d=d, y=y, X=X, power=1.)
+model = stan_model(file = 'garch_WB.stan')
+```
+
+
+
+```{r}
+fit = optimizing(model, data = data, hessian = TRUE, verbose = T)
+```
+```{r}
+laplace = list(mode = fit$par, hessian = fit$hessian, var_names = names(fit$par))
+write_json(laplace, "laplace.json")
+laplace$hessian
+```
+```{r}
+fit_vb = vb(model, data)
+```
+
+```{r}
+vb_samples = extract(fit_vb)
+write_json(vb_samples, "vb.json")
+```
+
+

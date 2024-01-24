@@ -1,0 +1,51 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(dplyr)
+library(rstan)
+library(jsonlite)
+library(reticulate)
+
+```
+
+
+```{r}
+python_dat = py_load_object('data.pkl')
+p = length(python_dat$alpha)
+q = dim(python_dat$X)[2]
+y = python_dat$y
+X = python_dat$X
+T = length(y)
+data = list(T=T, p=p, q=q, y=y, X=X, power=1.)
+model = stan_model(file = 'model_binaryAR.stan')
+```
+
+
+
+```{r}
+fit = optimizing(model, data = data, hessian = TRUE, verbose = T)
+```
+```{r}
+laplace = list(mode = fit$par, hessian = fit$hessian, var_names = names(fit$par))
+write_json(laplace, "laplace.json")
+laplace$hessian
+```
+
+# VB
+
+```{r}
+# Now we do VB
+fit_vb = vb(model, data)
+```
+
+```{r}
+vb_samples = extract(fit_vb)
+write_json(vb_samples, "vb.json")
+```
+
+
+
